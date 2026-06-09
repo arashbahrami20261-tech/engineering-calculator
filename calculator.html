@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="fa" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Engineering Calculator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --card: #21253a;
+      --border: #2e3350;
+      --accent: #6c63ff;
+      --accent2: #8b85ff;
+      --text: #e8e9f3;
+      --muted: #8a8fa8;
+      --danger: #ff6b6b;
+      --info: #60a5fa;
+      --success: #4ecdc4;
+      --warning: #ffb347;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 32px 16px 64px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, var(--text), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+
+    .wrap {
+      display: grid;
+      grid-template-columns: 380px 220px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--surface);
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    }
+
+    /* ── Display ── */
+    #display {
+      background: var(--card);
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--border);
+      min-height: 92px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    #expr {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: 'Courier New', monospace;
+      min-height: 18px;
+      text-align: right;
+      word-break: break-all;
+      margin-bottom: 4px;
+    }
+
+    #result {
+      font-size: 32px;
+      font-weight: 700;
+      text-align: right;
+      font-family: 'Courier New', monospace;
+      letter-spacing: -1px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ── Mode bar ── */
+    .mode-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 8px 4px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      background: none;
+      border: none;
+      border-right: 1px solid var(--border);
+      cursor: pointer;
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+
+    .mode-btn:last-child { border-right: none; }
+    .mode-btn:hover { background: rgba(108,99,255,0.08); color: var(--text); }
+    .mode-btn.active { background: rgba(108,99,255,0.15); color: var(--accent2); }
+
+    /* ── Memory bar ── */
+    .mem-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mem-btn {
+      flex: 1;
+      padding: 6px 2px;
+      font-size: 11px;
+      font-weight: 600;
+      background: none;
+      border: none;
+      border-right: 1px solid var(--border);
+      cursor: pointer;
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+
+    .mem-btn:last-child { border-right: none; }
+    .mem-btn:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+
+    #mem-display {
+      font-size: 10px;
+      color: var(--muted);
+      padding: 3px 12px;
+      min-height: 18px;
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+    }
+
+    /* ── Constants ── */
+    .const-bar {
+      display: flex;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--border);
+      scrollbar-width: none;
+    }
+
+    .const-bar::-webkit-scrollbar { display: none; }
+
+    .const-btn {
+      padding: 5px 12px;
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      background: none;
+      border: none;
+      border-right: 1px solid var(--border);
+      cursor: pointer;
+      color: var(--muted);
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .const-btn:last-child { border-right: none; }
+    .const-btn:hover { color: var(--accent2); background: rgba(108,99,255,0.08); }
+
+    #angle-btn {
+      margin-left: auto;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      background: none;
+      border: none;
+      border-left: 1px solid var(--border);
+      cursor: pointer;
+      color: var(--warning);
+      white-space: nowrap;
+      letter-spacing: 0.05em;
+    }
+
+    #angle-btn:hover { background: rgba(255,179,71,0.1); }
+
+    /* ── Button grid ── */
+    #buttons {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+    }
+
+    .btn {
+      height: 46px;
+      font-size: 13px;
+      background: none;
+      border: none;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      color: var(--text);
+      transition: all 0.12s;
+      font-family: inherit;
+      font-weight: 400;
+    }
+
+    .btn:nth-child(5n) { border-right: none; }
+    .btn:disabled { opacity: 0; cursor: default; }
+    .btn:hover:not(:disabled) { background: rgba(255,255,255,0.05); }
+    .btn:active:not(:disabled) { background: rgba(255,255,255,0.09); transform: scale(0.97); }
+
+    .btn.op { color: var(--info); font-weight: 600; }
+    .btn.fn { font-size: 11px; color: var(--muted); }
+    .btn.fn:hover { color: var(--accent2); }
+    .btn.clr { color: var(--danger); }
+    .btn.eq {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-size: 20px;
+      font-weight: 700;
+      border-right: none;
+    }
+    .btn.eq:hover { opacity: 0.88; transform: none; }
+
+    /* ── History panel ── */
+    #history-panel {
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hist-header {
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      text-transform: uppercase;
+    }
+
+    #clear-hist {
+      font-size: 11px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-family: inherit;
+      transition: color 0.15s;
+    }
+
+    #clear-hist:hover { color: var(--danger); }
+
+    #hist-list {
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    #hist-list::-webkit-scrollbar { width: 4px; }
+    #hist-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .hist-item {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+
+    .hist-item:hover { background: rgba(108,99,255,0.08); }
+
+    .hist-e {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: 'Courier New', monospace;
+      margin-bottom: 2px;
+      word-break: break-all;
+    }
+
+    .hist-r {
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .empty-hist {
+      padding: 24px 14px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* ── Keyboard shortcut hint ── */
+    .hint {
+      margin-top: 14px;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .hint kbd {
+      display: inline-block;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 10px;
+      font-family: 'Courier New', monospace;
+      color: var(--text);
+      margin-right: 3px;
+    }
+
+    @media (max-width: 640px) {
+      .wrap { grid-template-columns: 1fr; }
+      #history-panel { border-left: none; border-top: 1px solid var(--border); max-height: 200px; }
+      #result { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Engineering Calculator</h1>
+  <p class="subtitle">STD · SCI · PROG &nbsp;·&nbsp; memory · constants · history</p>
+
+  <div class="wrap">
+    <!-- Main calc -->
+    <div id="main">
+      <div id="display">
+        <div id="expr"></div>
+        <div id="result">0</div>
+      </div>
+
+      <div class="mode-bar">
+        <button class="mode-btn active" id="m-std" onclick="setMode('std')">STD</button>
+        <button class="mode-btn" id="m-sci" onclick="setMode('sci')">SCI</button>
+        <button class="mode-btn" id="m-prog" onclick="setMode('prog')">PROG</button>
+      </div>
+
+      <div class="mem-bar">
+        <button class="mem-btn" onclick="memClear()">MC</button>
+        <button class="mem-btn" onclick="memRecall()">MR</button>
+        <button class="mem-btn" onclick="memStore()">MS</button>
+        <button class="mem-btn" onclick="memAdd()">M+</button>
+        <button class="mem-btn" onclick="memSub()">M−</button>
+      </div>
+      <div id="mem-display"></div>
+
+      <div class="const-bar">
+        <button class="const-btn" onclick="insertConst('Math.PI','π')">π</button>
+        <button class="const-btn" onclick="insertConst('Math.E','e')">e</button>
+        <button class="const-btn" onclick="insertConst('Math.SQRT2','√2')">√2</button>
+        <button class="const-btn" onclick="insertConst('1.618033988','φ')">φ</button>
+        <button class="const-btn" onclick="insertConst('299792458','c')">c</button>
+        <button class="const-btn" onclick="insertConst('6.674e-11','G')">G</button>
+        <button class="const-btn" onclick="insertConst('6.626e-34','h')">h</button>
+        <button class="const-btn" onclick="insertConst('1.38e-23','kB')">kB</button>
+        <button id="angle-btn" onclick="toggleAngle()">DEG</button>
+      </div>
+
+      <div id="buttons"></div>
+    </div>
+
+    <!-- History -->
+    <div id="history-panel">
+      <div class="hist-header">
+        <span>History</span>
+        <button id="clear-hist" onclick="clearHistory()">clear</button>
+      </div>
+      <div id="hist-list">
+        <div class="empty-hist">No calculations yet</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hint">
+    <span><kbd>Enter</kbd> calculate</span>
+    <span><kbd>Esc</kbd> clear</span>
+    <span><kbd>Backspace</kbd> delete</span>
+    <span><kbd>0–9</kbd><kbd>+ − * /</kbd> type directly</span>
+  </div>
+
+  <script>
+    let expr = '';
+    let result = '0';
+    let memory = 0;
+    let history = [];
+    let angleMode = 'DEG';
+    let mode = 'std';
+    let justCalc = false;
+
+    const LAYOUTS = {
+      std: [
+        ['(', ')', '^', '√', '%'],
+        ['C', '←', '±', '÷', '×'],
+        ['7', '8', '9', '-', '+'],
+        ['4', '5', '6', '', ''],
+        ['1', '2', '3', '', ''],
+        ['0', '', '.', '+/−', '='],
+      ],
+      sci: [
+        ['sin', 'cos', 'tan', 'log', 'ln'],
+        ['sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'log₂', 'eˣ'],
+        ['x²', 'x³', 'xⁿ', '√', '∛'],
+        ['(', ')', '^', '!', '%'],
+        ['C', '←', '±', '÷', '×'],
+        ['7', '8', '9', '-', '+'],
+        ['4', '5', '6', '', ''],
+        ['1', '2', '3', '', ''],
+        ['0', '', '.', '+/−', '='],
+      ],
+      prog: [
+        ['HEX', 'DEC', 'OCT', 'BIN', ''],
+        ['AND', 'OR', 'XOR', 'NOT', '<<'],
+        ['A', 'B', 'C', '>>', '%'],
+        ['D', 'E', 'F', '(', ')'],
+        ['C', '←', '', '÷', '×'],
+        ['7', '8', '9', '-', '+'],
+        ['4', '5', '6', '', ''],
+        ['1', '2', '3', '', ''],
+        ['0', '', '.', '+/−', '='],
+      ],
+    };
+
+    function setMode(m) {
+      mode = m;
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('m-' + m).classList.add('active');
+      renderButtons();
+    }
+
+    function toggleAngle() {
+      angleMode = angleMode === 'DEG' ? 'RAD' : 'DEG';
+      document.getElementById('angle-btn').textContent = angleMode;
+    }
+
+    function getAF() { return angleMode === 'DEG' ? Math.PI / 180 : 1; }
+
+    function renderButtons() {
+      const grid = document.getElementById('buttons');
+      grid.innerHTML = '';
+      LAYOUTS[mode].forEach(row => {
+        row.forEach(lbl => {
+          const b = document.createElement('button');
+          b.textContent = lbl;
+          if (!lbl) {
+            b.className = 'btn';
+            b.disabled = true;
+          } else if (lbl === '=') {
+            b.className = 'btn eq';
+          } else if (lbl === 'C' || lbl === '←') {
+            b.className = 'btn clr';
+          } else if ('÷×-+^%AND OR XOR NOT'.includes(lbl) || lbl === '<<' || lbl === '>>') {
+            b.className = 'btn op';
+          } else if (!lbl.match(/^[0-9.]$/)) {
+            b.className = 'btn fn';
+          } else {
+            b.className = 'btn';
+          }
+          b.onclick = () => handleBtn(lbl);
+          grid.appendChild(b);
+        });
+      });
+    }
+
+    function updateDisplay() {
+      document.getElementById('expr').textContent = expr;
+      document.getElementById('result').textContent = result;
+    }
+
+    function append(val) {
+      if (justCalc && /^[0-9.(]/.test(val)) { expr = ''; justCalc = false; }
+      else if (justCalc) { expr = result; justCalc = false; }
+      expr += val;
+    }
+
+    function appendFn(fn) {
+      if (justCalc) { expr = ''; justCalc = false; }
+      expr += fn + '(';
+    }
+
+    function insertConst(val, label) {
+      if (justCalc) { expr = ''; justCalc = false; }
+      expr += val;
+      updateDisplay();
+    }
+
+    function handleBtn(lbl) {
+      const map = {
+        'C': () => { expr = ''; result = '0'; justCalc = false; },
+        '←': () => { if (justCalc) { expr = ''; justCalc = false; } else expr = expr.slice(0, -1); },
+        '=': calculate,
+        '÷': () => append('/'),
+        '×': () => append('*'),
+        '√': () => append('sqrt('),
+        '∛': () => append('cbrt('),
+        '^': () => append('**'),
+        'xⁿ': () => append('**'),
+        'x²': () => append('**2'),
+        'x³': () => append('**3'),
+        '±': () => { if (expr) expr = '(' + expr + ')*-1'; },
+        '+/−': () => { if (expr) expr = '(' + expr + ')*-1'; },
+        '!': factorial,
+        'sin': () => appendFn('sin'),
+        'cos': () => appendFn('cos'),
+        'tan': () => appendFn('tan'),
+        'sin⁻¹': () => appendFn('asin'),
+        'cos⁻¹': () => appendFn('acos'),
+        'tan⁻¹': () => appendFn('atan'),
+        'log': () => appendFn('log10'),
+        'ln': () => appendFn('ln'),
+        'log₂': () => appendFn('log2'),
+        'eˣ': () => append('Math.E**'),
+        'AND': () => append('&'),
+        'OR': () => append('|'),
+        'XOR': () => append('^'),
+        'NOT': () => append('~'),
+        '<<': () => append('<<'),
+        '>>': () => append('>>'),
+        'HEX': () => convert('hex'),
+        'DEC': () => convert('dec'),
+        'OCT': () => convert('oct'),
+        'BIN': () => convert('bin'),
+        'A': () => append('0xA'),
+        'B': () => append('0xB'),
+        'D': () => append('0xD'),
+        'E': () => append('0xE'),
+        'F': () => append('0xF'),
+        '%': () => append('%'),
+      };
+      if (map[lbl]) map[lbl]();
+      else append(lbl);
+      updateDisplay();
+    }
+
+    function calculate() {
+      if (!expr) return;
+      try {
+        const af = getAF();
+        let e = expr
+          .replace(/sqrt\(/g, 'Math.sqrt(')
+          .replace(/cbrt\(/g, 'Math.cbrt(')
+          .replace(/log10\(/g, 'Math.log10(')
+          .replace(/log2\(/g, 'Math.log2(')
+          .replace(/\bln\(/g, 'Math.log(')
+          .replace(/\bsin\(/g, `Math.sin(${af}*`)
+          .replace(/\bcos\(/g, `Math.cos(${af}*`)
+          .replace(/\btan\(/g, `Math.tan(${af}*`)
+          .replace(/asin\(/g, `(1/${af})*Math.asin(`)
+          .replace(/acos\(/g, `(1/${af})*Math.acos(`)
+          .replace(/atan\(/g, `(1/${af})*Math.atan(`);
+
+        // eslint-disable-next-line no-eval
+        let val = eval(e);
+        if (typeof val === 'number' && isFinite(val)) {
+          result = formatNum(val);
+        } else {
+          result = 'Error';
+        }
+        addHistory(expr, result);
+        expr = result;
+        justCalc = true;
+      } catch {
+        result = 'Error';
+      }
+      updateDisplay();
+    }
+
+    function factorial() {
+      const n = parseFloat(result);
+      if (isNaN(n) || n < 0 || n !== Math.floor(n) || n > 170) { result = 'Error'; updateDisplay(); return; }
+      let r = 1;
+      for (let i = 2; i <= n; i++) r *= i;
+      result = formatNum(r);
+      addHistory(expr + '!', result);
+      justCalc = true;
+      updateDisplay();
+    }
+
+    function convert(base) {
+      try {
+        // eslint-disable-next-line no-eval
+        const n = Math.round(eval(expr || result));
+        if (isNaN(n)) return;
+        const r = { hex: '0x' + n.toString(16).toUpperCase(), dec: n.toString(10), oct: '0o' + n.toString(8), bin: '0b' + n.toString(2) }[base];
+        result = r;
+        addHistory((expr || result) + ' → ' + base.toUpperCase(), r);
+        justCalc = true;
+        updateDisplay();
+      } catch { result = 'Error'; updateDisplay(); }
+    }
+
+    function formatNum(n) {
+      if (Number.isInteger(n) && Math.abs(n) < 1e15) return n.toString();
+      if (Math.abs(n) >= 1e10 || (Math.abs(n) < 1e-4 && n !== 0)) return n.toExponential(6);
+      return parseFloat(n.toPrecision(12)).toString();
+    }
+
+    function addHistory(e, r) {
+      history.unshift({ e, r });
+      if (history.length > 100) history.pop();
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const list = document.getElementById('hist-list');
+      if (!history.length) { list.innerHTML = '<div class="empty-hist">No calculations yet</div>'; return; }
+      list.innerHTML = history.map((h, i) =>
+        `<div class="hist-item" onclick="recallHistory(${i})">
+          <div class="hist-e">${h.e}</div>
+          <div class="hist-r">${h.r}</div>
+        </div>`
+      ).join('');
+    }
+
+    function recallHistory(i) {
+      expr = history[i].r;
+      result = history[i].r;
+      justCalc = true;
+      updateDisplay();
+    }
+
+    function clearHistory() { history = []; renderHistory(); }
+
+    function memClear() { memory = 0; document.getElementById('mem-display').textContent = ''; }
+    function memRecall() { if (justCalc) { expr = ''; justCalc = false; } expr += memory.toString(); updateDisplay(); }
+    function memStore() { memory = parseFloat(result) || 0; document.getElementById('mem-display').textContent = 'M = ' + memory; }
+    function memAdd() { memory += parseFloat(result) || 0; document.getElementById('mem-display').textContent = 'M = ' + memory; }
+    function memSub() { memory -= parseFloat(result) || 0; document.getElementById('mem-display').textContent = 'M = ' + memory; }
+
+    document.addEventListener('keydown', e => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const map = { Enter: '=', Backspace: '←', Escape: 'C', '*': '×', '/': '÷' };
+      if (/^[0-9.+\-%(). ]$/.test(e.key)) { handleBtn(e.key.trim() || ''); }
+      else if (map[e.key]) handleBtn(map[e.key]);
+    });
+
+    renderButtons();
+    updateDisplay();
+  </script>
+</body>
+</html>
